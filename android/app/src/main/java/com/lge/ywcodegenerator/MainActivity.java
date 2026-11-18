@@ -112,7 +112,7 @@ public final class MainActivity extends Activity {
         try {
             URL parsed = new URL(base);
             if (!"https".equalsIgnoreCase(parsed.getProtocol()) || parsed.getHost().isEmpty()) throw new IllegalArgumentException("Use an HTTPS server URL.");
-            if (adminSecret.trim().length() < 16) throw new IllegalArgumentException("Enter the administrator secret.");
+            if (adminSecret.trim().length() < 32) throw new IllegalArgumentException("Enter the administrator secret.");
             howMany = number(count, 1, 50, "Code count");
             uses = number(maxUses, 1, 100, "Redemptions per code");
             hours = number(expiry, 1, 720, "Expiry");
