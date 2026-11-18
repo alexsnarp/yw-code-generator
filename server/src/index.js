@@ -28,7 +28,9 @@ function constantTimeEqual(a, b) {
 
 async function isAdmin(request, env) {
   const expected = env.ADMIN_SECRET || "";
-  const supplied = (request.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
+  const header = request.headers.get("authorization") || "";
+  if (!header.startsWith("Bearer ")) return false;
+  const supplied = header.slice(7);
   return expected.length >= 32 && constantTimeEqual(supplied, expected);
 }
 
