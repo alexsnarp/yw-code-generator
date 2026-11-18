@@ -20,10 +20,13 @@ jobs:
           gradle-version: '8.9'
       - name: Run Android unit tests
         run: gradle --no-daemon testDebugUnitTest
+        working-directory: android
       - name: Run Android lint
         run: gradle --no-daemon lintDebug
+        working-directory: android
       - name: Build APK
         run: gradle --no-daemon assembleDebug
+        working-directory: android
       - uses: actions/upload-artifact@v4
         with:
           name: yw-code-generator-debug
