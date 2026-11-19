@@ -43,7 +43,10 @@ function boundedInteger(value, min, max, fallback) {
 async function createCodes(db, input, timestamp = Math.floor(Date.now() / 1000)) {
   const count = boundedInteger(input.count, 1, 50, 1);
   const maxUses = boundedInteger(input.maxUses, 1, 100, 1);
-  const ttlHours = boundedInteger(input.ttlHours, 1, 720, 168);
+  const legacyHours = Number(input.ttlHours);
+  const fallbackDays = Number.isSafeInteger(legacyHours) && legacyHours > 0
+    ? Math.max(1, Math.min(30, Math.ceil(legacyHours / 24))) : 7;
+  const ttlDays = boundedInteger(input.ttlDays, 1, 30, fallbackDays);
   const codes = [];
   for (let i = 0; i < count; i++) {
     let inserted = false;
@@ -52,7 +55,7 @@ async function createCodes(db, input, timestamp = Math.floor(Date.now() / 1000))
       const hash = await sha256(code);
       const result = await db.prepare(
         "INSERT OR IGNORE INTO authorization_codes (code_hash, expires_at, used_at, created_at, max_uses, uses_count) VALUES (?, ?, NULL, ?, ?, 0)"
-      ).bind(hash, timestamp + ttlHours * 3600, timestamp, maxUses).run();
+      ).bind(hash, timestamp + ttlDays * 86400, timestamp, maxUses).run();
       if (result.meta && result.meta.changes === 1) {
         codes.push(code);
         inserted = true;
@@ -60,7 +63,7 @@ async function createCodes(db, input, timestamp = Math.floor(Date.now() / 1000))
     }
     if (!inserted) throw new Error("Could not allocate a unique code. Please retry.");
   }
-  return { codes, maxUses, expiresInHours: ttlHours };
+  return { codes, maxUses, expiresInDays: ttlDays };
 }
 
 export { randomCode, sha256, constantTimeEqual, boundedInteger, createCodes };
