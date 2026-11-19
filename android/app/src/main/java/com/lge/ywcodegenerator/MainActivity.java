@@ -46,45 +46,45 @@ public final class MainActivity extends Activity {
     }
     private EditText field(String hint, String value, int inputType) {
         EditText e = new EditText(this); e.setSingleLine(true); e.setText(value); e.setHint(hint);
-        e.setTextSize(16); e.setTextColor(INK); e.setHintTextColor(MUTED); e.setInputType(inputType);
-        e.setPadding(dp(13), dp(8), dp(13), dp(8)); e.setBackground(rounded(Color.WHITE, 0xffdbe3ef));
+        e.setTextSize(15); e.setTextColor(INK); e.setHintTextColor(MUTED); e.setInputType(inputType);
+        e.setPadding(dp(11), dp(6), dp(11), dp(6)); e.setBackground(rounded(Color.WHITE, 0xffdbe3ef));
         return e;
     }
     private void addField(LinearLayout card, String title, EditText input) {
-        TextView caption = label(title, 13, MUTED, true);
-        LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(-1, -2); cp.topMargin = dp(12); card.addView(caption, cp);
-        LinearLayout.LayoutParams ep = new LinearLayout.LayoutParams(-1, dp(50)); ep.topMargin = dp(5); card.addView(input, ep);
+        TextView caption = label(title, 12, MUTED, true);
+        LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(-1, -2); cp.topMargin = dp(7); card.addView(caption, cp);
+        LinearLayout.LayoutParams ep = new LinearLayout.LayoutParams(-1, dp(42)); ep.topMargin = dp(4); card.addView(input, ep);
     }
 
     private void buildUi() {
         ScrollView scroll = new ScrollView(this); scroll.setFillViewport(true); scroll.setBackgroundColor(BG);
         LinearLayout page = new LinearLayout(this); page.setOrientation(LinearLayout.VERTICAL);
-        page.setPadding(dp(18), dp(22), dp(18), dp(24)); scroll.addView(page); setContentView(scroll);
+        page.setPadding(dp(14), dp(16), dp(14), dp(16)); scroll.addView(page); setContentView(scroll);
         page.addView(label("YW Code Generator", 24, INK, true));
         TextView intro = label("Create short authorization codes for the YW App Store.", 14, MUTED, false);
         LinearLayout.LayoutParams introLp = new LinearLayout.LayoutParams(-1, -2); introLp.topMargin = dp(6); page.addView(intro, introLp);
 
-        LinearLayout card = new LinearLayout(this); card.setOrientation(LinearLayout.VERTICAL); card.setPadding(dp(16), dp(14), dp(16), dp(16));
+        LinearLayout card = new LinearLayout(this); card.setOrientation(LinearLayout.VERTICAL); card.setPadding(dp(12), dp(10), dp(12), dp(12));
         card.setBackground(rounded(Color.WHITE, 0xffe2e8f0));
         LinearLayout.LayoutParams cardLp = new LinearLayout.LayoutParams(-1, -2); cardLp.topMargin = dp(18); page.addView(card, cardLp);
         endpoint = field("https://your-worker.workers.dev", DEFAULT_API, android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_URI);
         secret = field("Administrator secret", "", android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
         count = field("1", "1", android.text.InputType.TYPE_CLASS_NUMBER);
         maxUses = field("1–100", "1", android.text.InputType.TYPE_CLASS_NUMBER);
-        expiry = field("168", "168", android.text.InputType.TYPE_CLASS_NUMBER);
+        expiry = field("7", "7", android.text.InputType.TYPE_CLASS_NUMBER);
         addField(card, "SERVER URL", endpoint);
         addField(card, "ADMINISTRATOR SECRET (NOT SAVED)", secret);
         addField(card, "NUMBER OF CODES (1–50)", count);
         addField(card, "REDEMPTIONS PER CODE (1–100)", maxUses);
-        addField(card, "EXPIRES AFTER HOURS (1–720)", expiry);
+        addField(card, "EXPIRES AFTER DAYS (1–30)", expiry);
 
         generate = new Button(this); generate.setText("Generate codes"); generate.setAllCaps(false); generate.setTextSize(16);
         generate.setTypeface(Typeface.DEFAULT, Typeface.BOLD); generate.setTextColor(Color.WHITE); generate.setBackground(rounded(BLUE, 0));
-        LinearLayout.LayoutParams gp = new LinearLayout.LayoutParams(-1, dp(52)); gp.topMargin = dp(18); card.addView(generate, gp);
+        LinearLayout.LayoutParams gp = new LinearLayout.LayoutParams(-1, dp(46)); gp.topMargin = dp(12); card.addView(generate, gp);
         status = label("The administrator secret is used only for this request and is never stored.", 12, MUTED, false);
         LinearLayout.LayoutParams statusLp = new LinearLayout.LayoutParams(-1, -2); statusLp.topMargin = dp(12); card.addView(status, statusLp);
 
-        LinearLayout outputCard = new LinearLayout(this); outputCard.setOrientation(LinearLayout.VERTICAL); outputCard.setPadding(dp(16), dp(14), dp(16), dp(16));
+        LinearLayout outputCard = new LinearLayout(this); outputCard.setOrientation(LinearLayout.VERTICAL); outputCard.setPadding(dp(12), dp(10), dp(12), dp(12));
         outputCard.setBackground(rounded(Color.WHITE, 0xffe2e8f0));
         LinearLayout.LayoutParams outputLp = new LinearLayout.LayoutParams(-1, -2); outputLp.topMargin = dp(16); page.addView(outputCard, outputLp);
         outputCard.addView(label("Generated codes", 18, INK, true));
@@ -108,14 +108,14 @@ public final class MainActivity extends Activity {
     private void generateCodes() {
         final String base = endpoint.getText().toString().trim().replaceAll("/+$", "");
         final String adminSecret = secret.getText().toString();
-        final int howMany, uses, hours;
+        final int howMany, uses, days;
         try {
             URL parsed = new URL(base);
             if (!"https".equalsIgnoreCase(parsed.getProtocol()) || parsed.getHost().isEmpty()) throw new IllegalArgumentException("Use an HTTPS server URL.");
-            if (adminSecret.trim().length() < 32) throw new IllegalArgumentException("Enter the administrator secret.");
+            if (adminSecret.trim().isEmpty()) throw new IllegalArgumentException("Enter the administrator secret.");
             howMany = number(count, 1, 50, "Code count");
             uses = number(maxUses, 1, 100, "Redemptions per code");
-            hours = number(expiry, 1, 720, "Expiry");
+            days = number(expiry, 1, 30, "Expiry days");
         } catch (Exception e) { status.setText(e.getMessage()); return; }
 
         ((InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(generate.getWindowToken(), 0);
@@ -123,7 +123,7 @@ public final class MainActivity extends Activity {
         new Thread(() -> {
             HttpsURLConnection connection = null;
             try {
-                JSONObject body = new JSONObject(); body.put("count", howMany); body.put("maxUses", uses); body.put("ttlHours", hours);
+                JSONObject body = new JSONObject(); body.put("count", howMany); body.put("maxUses", uses); body.put("ttlDays", days);
                 connection = (HttpsURLConnection)new URL(base + "/admin/codes").openConnection();
                 LegacyTlsCompat.configure(this, connection);
                 connection.setRequestMethod("POST"); connection.setDoOutput(true); connection.setConnectTimeout(15000); connection.setReadTimeout(20000);
@@ -141,7 +141,7 @@ public final class MainActivity extends Activity {
                 StringBuilder display = new StringBuilder();
                 for (int i = 0; i < codes.length(); i++) display.append(codes.optString(i)).append('\n');
                 String output = display.toString().trim();
-                runOnUiThread(() -> { generatedCodes = output; result.setText(output); status.setText("Created " + howMany + " code(s), " + uses + " redemption(s) each. Expires in " + hours + " hours."); generate.setEnabled(true); generate.setText("Generate codes"); secret.setText(""); });
+                runOnUiThread(() -> { generatedCodes = output; result.setText(output); status.setText("Created " + howMany + " code(s), " + uses + " redemption(s) each. Expires in " + days + (days == 1 ? " day." : " days.")); generate.setEnabled(true); generate.setText("Generate codes"); secret.setText(""); });
             } catch (Exception e) {
                 String message = e.getMessage() == null ? "Could not contact the code server." : e.getMessage();
                 runOnUiThread(() -> { status.setText(message); generate.setEnabled(true); generate.setText("Generate codes"); secret.setText(""); });

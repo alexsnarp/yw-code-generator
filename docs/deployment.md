@@ -4,7 +4,7 @@
 
 The App Store Worker is `yw-app-store-api`. It already exposes:
 
-- `POST /admin/codes` — accepts `{ "count": 1, "maxUses": 1, "ttlHours": 168 }`.
+- `POST /admin/codes` — accepts `{ "count": 1, "maxUses": 1, "ttlDays": 7 }`.
 - `POST /api/redeem` — redeems codes and issues device tokens.
 - `ADMIN_SECRET` — administrator secret binding.
 - `DB` — D1 database binding containing `authorization_codes`.
@@ -21,11 +21,11 @@ The `server/src/index.js` Worker is a standalone admin-only implementation of th
 4. Do not create a new D1 database. Both the App Store redemption API and code generator must use the same `authorization_codes` table.
 5. Set the app's Server URL field to the new Worker's HTTPS URL.
 
-The secret must be at least 32 characters. Do not put it in source control, build configuration, app resources, or the APK. The Android app asks for it at runtime and clears the field after each request.
+Use a strong administrator secret (32+ characters recommended). Do not put it in source control, build configuration, app resources, or the APK. The Android app asks for it at runtime and clears the field after each request.
 
 ## Code format and security
 
-Codes contain 8 random characters from an ambiguity-reduced 32-character alphabet, displayed as `XXXX-XXXX` (40 bits of entropy). The API hashes each code with SHA-256 before storing it. A code's use limit is 1–100 and its lifetime is 1–720 hours. Plaintext codes are returned only once at creation time.
+Codes contain 8 random characters from an ambiguity-reduced 32-character alphabet, displayed as `XXXX-XXXX` (40 bits of entropy). The API hashes each code with SHA-256 before storing it. A code's use limit is 1–100 and its lifetime is 1–30 days. Plaintext codes are returned only once at creation time.
 
 The existing App Store API applies an IP-based redemption-attempt limit and checks `uses_count < max_uses` atomically in its conditional SQL update. Keep that redeem endpoint and database table as the authority for redemption.
 
